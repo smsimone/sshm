@@ -49,6 +49,14 @@ func (pvt *PrivateKey) signer() ssh.Signer {
 		panic(fmt.Sprintf("Failed to read private key content: %s", err.Error()))
 	}
 
+	if pvt.Passphrase != nil && len(*pvt.Passphrase) > 0 {
+		signer, err := ssh.ParsePrivateKeyWithPassphrase(content, []byte(*pvt.Passphrase))
+		if err != nil {
+			panic(fmt.Sprintf("Failed to parse private key: %s", err.Error()))
+		}
+		return signer
+	}
+
 	signer, err := ssh.ParsePrivateKey(content)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse private key: %s", err.Error()))

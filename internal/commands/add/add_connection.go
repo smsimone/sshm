@@ -84,9 +84,9 @@ func loadPrivateKey(keyPath string, keyPassphrase *string) (*sshconn.PrivateKey,
 
 	encodedContent := base64.StdEncoding.EncodeToString(content)
 
-	pvt := sshconn.PrivateKey{
-		Content:    encodedContent,
-		Passphrase: keyPassphrase,
+	pvt := sshconn.PrivateKey{Content: encodedContent}
+	if keyPassphrase != nil && len(*keyPassphrase) > 0 {
+		pvt.Passphrase = keyPassphrase
 	}
 
 	return &pvt, nil
