@@ -71,8 +71,6 @@ func loadPrivateKey(privateKey string, keyPassphrase *string) (*sshconn.PrivateK
 
 		fmt.Println("Provided key is not a file, trying to read as the content")
 		content = []byte(privateKey)
-
-		return nil, fmt.Errorf("private key does not exists")
 	} else if stat.IsDir() {
 		return nil, fmt.Errorf("private key path is pointing to a directory")
 	} else {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	sshconn "term_cli/internal/ssh_conn"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -15,10 +16,7 @@ const (
 	labelField = iota
 	hostField
 	portField
-	usernameField
-	passwordField
-	privateKeyField
-	passphraseField
+	profileField
 )
 
 var (
@@ -36,6 +34,7 @@ var (
 type model struct {
 	focusIndex  int
 	inputFields []textinput.Model
+	profiles    []string
 	cursorMode  cursor.Mode
 	quitting    bool
 }
@@ -44,12 +43,21 @@ var _ tea.Model = (*model)(nil)
 
 func initialModel() model {
 	m := model{
-		inputFields: make([]textinput.Model, 7),
+		inputFields: make([]textinput.Model, 4),
 	}
+
+	p, _ := sshconn.LoadProfiles()
+	profiles := make([]string, len(*p))
+	for i := range *p {
+		profiles[i] = (*p)[i].Label
+	}
+	m.profiles = profiles
 
 	var t textinput.Model
 	for i := range m.inputFields {
 		t = textinput.New()
+		t.SetWidth(32)
+		t.CharLimit = 32
 
 		s := t.Styles()
 		s.Cursor.Color = lipgloss.Color("205")
@@ -76,17 +84,9 @@ func initialModel() model {
 				return nil
 			}
 		case 3:
-			t.Placeholder = "Username"
-		case 4:
-			t.Placeholder = "Password"
-			t.EchoMode = textinput.EchoPassword
-			t.EchoCharacter = '*'
-		case 5:
-			t.Placeholder = "Private key (file/content)"
-		case 6:
-			t.Placeholder = "Passphrase"
-			t.EchoMode = textinput.EchoPassword
-			t.EchoCharacter = '*'
+			t.Placeholder = "Profile"
+			t.ShowSuggestions = true
+			t.SetSuggestions(profiles)
 		}
 
 		m.inputFields[i] = t
@@ -107,26 +107,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 
-		// Change cursor mode
-		case "ctrl+r":
-			m.cursorMode++
-			if m.cursorMode > cursor.CursorHide {
-				m.cursorMode = cursor.CursorBlink
-			}
-			cmds := make([]tea.Cmd, len(m.inputFields))
-			for i := range m.inputFields {
-				s := m.inputFields[i].Styles()
-				s.Cursor.Blink = m.cursorMode == cursor.CursorBlink
-				m.inputFields[i].SetStyles(s)
-			}
-			return m, tea.Batch(cmds...)
-
-		// Set focus to next input
-		case "tab", "shift+tab", "enter", "up", "down":
+		case "enter", "up", "down":
 			s := msg.String()
 
-			// Did the user press enter while the submit button was focused?
-			// If so, exit.
 			if s == "enter" && m.focusIndex == len(m.inputFields) {
 				return m, tea.Quit
 			}
@@ -147,11 +130,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds := make([]tea.Cmd, len(m.inputFields))
 			for i := 0; i <= len(m.inputFields)-1; i++ {
 				if i == m.focusIndex {
-					// Set focused state
 					cmds[i] = m.inputFields[i].Focus()
 					continue
 				}
-				// Remove focused state
 				m.inputFields[i].Blur()
 			}
 
@@ -159,7 +140,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// Handle character input and blinking
 	cmd := m.updateInputs(msg)
 
 	return m, cmd
@@ -168,8 +148,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) updateInputs(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, len(m.inputFields))
 
-	// Only text inputs with Focus() set will respond, so it's safe to simply
-	// update all of them here without any further logic.
 	for i := range m.inputFields {
 		m.inputFields[i], cmds[i] = m.inputFields[i].Update(msg)
 	}
@@ -193,6 +171,7 @@ func (m model) View() tea.View {
 			}
 		}
 	}
+	fmt.Fprintf(&b, "%s\n", strings.Join(m.profiles, ","))
 
 	button := &blurredButton
 	if m.focusIndex == len(m.inputFields) {

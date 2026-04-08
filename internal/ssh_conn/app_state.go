@@ -12,9 +12,20 @@ const (
 	configPath = "$HOME/.config/ssh_manager/config"
 )
 
+var state appState = appState{}
+
 type appState struct {
 	Connections []Connection `json:"connections"`
 	Profiles    []Profile    `json:"profiles"`
+}
+
+func (as *appState) persist() error {
+	bytes, err := json.Marshal(*as)
+	if err != nil {
+		return fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	return os.WriteFile(os.ExpandEnv(configPath), bytes, os.ModeDevice)
 }
 
 func ensureFile() {
@@ -35,24 +46,23 @@ func ensureFile() {
 	}
 }
 
-func LoadFile() (*appState, error) {
+func loadFile() error {
 	ensureFile()
 
 	content, err := os.ReadFile(os.ExpandEnv(configPath))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var data appState
-	if err := json.Unmarshal(content, &data); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal file: %w", err)
+	if err := json.Unmarshal(content, &state); err != nil {
+		return fmt.Errorf("failed to unmarshal file: %w", err)
 	}
 
-	return &data, nil
+	return nil
 }
 
 func GetProfile(label string) (*Profile, error) {
-	state, err := LoadFile()
+	err := loadFile()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %s", err.Error())
 	}
@@ -67,8 +77,16 @@ func GetProfile(label string) (*Profile, error) {
 	return &state.Profiles[idx], nil
 }
 
+func LoadProfiles() (*[]Profile, error) {
+	err := loadFile()
+	if err != nil {
+		return nil, err
+	}
+	return &state.Profiles, nil
+}
+
 func LoadConnections() (*[]Connection, error) {
-	state, err := LoadFile()
+	err := loadFile()
 	if err != nil {
 		return nil, err
 	}
@@ -76,34 +94,21 @@ func LoadConnections() (*[]Connection, error) {
 }
 
 func AddItem(con Connection) error {
-	curr, err := LoadFile()
+	err := loadFile()
 	if err != nil {
 		return fmt.Errorf("failed to recover current items: %w", err)
 	}
-	data := *curr
-	data.Connections = append(data.Connections, con)
-
-	bytes, err := json.Marshal(&data)
-	if err != nil {
-		return fmt.Errorf("failed to marshal data: %w", err)
-	}
-
-	return os.WriteFile(os.ExpandEnv(configPath), bytes, os.ModeDevice)
+	state.Connections = append(state.Connections, con)
+	return state.persist()
 }
 
 func AddProfile(profile Profile) error {
-	curr, err := LoadFile()
+	err := loadFile()
 	if err != nil {
 		return fmt.Errorf("failed to recover current items: %w", err)
 	}
-	data := *curr
-	data.Profiles = append(data.Profiles, profile)
 
-	bytes, err := json.Marshal(&data)
-	if err != nil {
-		return fmt.Errorf("failed to marshal data: %w", err)
-	}
+	state.Profiles = append(state.Profiles, profile)
 
-	return os.WriteFile(os.ExpandEnv(configPath), bytes, os.ModeDevice)
-
+	return state.persist()
 }
