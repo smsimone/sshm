@@ -90,3 +90,20 @@ func AddItem(con Connection) error {
 
 	return os.WriteFile(os.ExpandEnv(configPath), bytes, os.ModeDevice)
 }
+
+func AddProfile(profile Profile) error {
+	curr, err := LoadFile()
+	if err != nil {
+		return fmt.Errorf("failed to recover current items: %w", err)
+	}
+	data := *curr
+	data.Profiles = append(data.Profiles, profile)
+
+	bytes, err := json.Marshal(&data)
+	if err != nil {
+		return fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	return os.WriteFile(os.ExpandEnv(configPath), bytes, os.ModeDevice)
+
+}
