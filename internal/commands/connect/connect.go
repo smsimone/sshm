@@ -9,7 +9,6 @@ import (
 	"slices"
 	sshconn "sshm/internal/ssh_conn"
 	"strconv"
-	"syscall"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -119,7 +118,8 @@ func requestPty(session *ssh.Session) error {
 
 	go func() {
 		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, syscall.SIGWINCH)
+		signal.Notify(sigCh)
+		defer signal.Stop(sigCh)
 		for range sigCh {
 			if w, h, err := term.GetSize(fd); err == nil {
 				session.WindowChange(h, w)
