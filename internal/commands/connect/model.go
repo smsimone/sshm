@@ -2,8 +2,8 @@ package connect
 
 import (
 	"fmt"
+	sshconn "sshm/internal/ssh_conn"
 	"strings"
-	sshconn "term_cli/internal/ssh_conn"
 
 	tea "charm.land/bubbletea/v2"
 )

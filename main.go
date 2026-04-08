@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"os"
-	"term_cli/commands"
+	"sshm/commands"
 
 	"github.com/charmbracelet/fang"
 )

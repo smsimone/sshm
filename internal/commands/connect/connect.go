@@ -8,9 +8,9 @@ import (
 	"os"
 	"os/signal"
 	"slices"
+	sshconn "sshm/internal/ssh_conn"
 	"strconv"
 	"syscall"
-	sshconn "term_cli/internal/ssh_conn"
 	"time"
 
 	tea "charm.land/bubbletea/v2"

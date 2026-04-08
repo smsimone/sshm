@@ -2,7 +2,7 @@ package list
 
 import (
 	"fmt"
-	sshconn "term_cli/internal/ssh_conn"
+	sshconn "sshm/internal/ssh_conn"
 
 	"github.com/spf13/cobra"
 )
@@ -18,7 +18,7 @@ func NewCommand() *cobra.Command {
 			}
 
 			for idx, con := range *connections {
-				fmt.Printf("[%d] %s@%s:%d\n", idx, con.GetProfile().Username, con.Host, con.Port)
+				fmt.Printf("[%d] (%s) %s@%s:%d\n", idx, con.Label, con.GetProfile().Username, con.Host, con.Port)
 			}
 
 			return nil

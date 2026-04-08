@@ -3,7 +3,7 @@ package add
 import (
 	"fmt"
 
-	sshconn "term_cli/internal/ssh_conn"
+	sshconn "sshm/internal/ssh_conn"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
@@ -15,12 +15,14 @@ func NewTeaCommand() *cobra.Command {
 		Short: "Add a new connection to the file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			p := initialModel()
-			_, err := tea.NewProgram(p).Run()
+			res, err := tea.NewProgram(p).Run()
 			if err != nil {
 				return err
+			} else if p.quitting {
+				return nil
 			}
-
-			return nil
+			model := res.(model)
+			return sshconn.AddItem(model.GetConnection())
 		},
 	}
 	return cmd

@@ -1,4 +1,4 @@
-module term_cli
+module sshm
 
 go 1.26.1
 

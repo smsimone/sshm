@@ -1,17 +1,18 @@
 package commands
 
 import (
-	"term_cli/internal/commands/add"
-	"term_cli/internal/commands/connect"
-	"term_cli/internal/commands/list"
-	"term_cli/internal/commands/profile"
+	"sshm/internal/commands/add"
+	"sshm/internal/commands/connect"
+	"sshm/internal/commands/list"
+	"sshm/internal/commands/profile"
 
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "term",
-	Short: "A simple example program!",
+	Use:     "sshm",
+	Short:   "Ssh connectoin manager",
+	Version: "0.0.1",
 }
 
 func GetRootCommand() *cobra.Command {

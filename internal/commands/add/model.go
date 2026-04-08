@@ -2,9 +2,9 @@ package add
 
 import (
 	"fmt"
+	sshconn "sshm/internal/ssh_conn"
 	"strconv"
 	"strings"
-	sshconn "term_cli/internal/ssh_conn"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -42,9 +42,7 @@ type model struct {
 var _ tea.Model = (*model)(nil)
 
 func initialModel() model {
-	m := model{
-		inputFields: make([]textinput.Model, 4),
-	}
+	m := model{inputFields: make([]textinput.Model, 4)}
 
 	p, _ := sshconn.LoadProfiles()
 	profiles := make([]string, len(*p))
@@ -93,6 +91,21 @@ func initialModel() model {
 	}
 
 	return m
+}
+
+func (m *model) GetConnection() sshconn.Connection {
+	port, _ := strconv.Atoi(m.inputFields[portField].Value())
+	var profile *string
+	if len(m.inputFields[profileField].Value()) > 0 {
+		profile = new(m.inputFields[profileField].Value())
+	}
+
+	return sshconn.Connection{
+		Label:   m.inputFields[labelField].Value(),
+		Host:    m.inputFields[hostField].Value(),
+		Port:    port,
+		Profile: profile,
+	}
 }
 
 func (m model) Init() tea.Cmd {

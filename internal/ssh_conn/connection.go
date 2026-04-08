@@ -21,7 +21,7 @@ type Connection struct {
 }
 
 func (c *Connection) String(asJson bool) string {
-	basic := fmt.Sprintf("%s@%s:%d", c.GetProfile().Username, c.Host, c.Port)
+	basic := fmt.Sprintf("(%s) %s@%s:%d", c.Label, c.GetProfile().Username, c.Host, c.Port)
 	if !asJson {
 		return basic
 	}

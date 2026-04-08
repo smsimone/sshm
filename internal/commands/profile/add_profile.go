@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	sshconn "term_cli/internal/ssh_conn"
+	sshconn "sshm/internal/ssh_conn"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
@@ -12,7 +12,6 @@ import (
 )
 
 func AddProfileCommand() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "add-profile",
 		Short: "Creates a new profile which can be used in a connection",
@@ -22,12 +21,15 @@ func AddProfileCommand() *cobra.Command {
 			res, err := tea.NewProgram(m).Run()
 			if err != nil {
 				return err
+			} else if m.quitting {
+				return fmt.Errorf("received null model from tea program")
 			}
-			m = res.(model)
+
+			m = res.(*model)
 
 			profile, pvtKey := m.GetProfile()
 
-			if len(pvtKey.passphrase) > 0 {
+			if pvtKey != nil && len(pvtKey.passphrase) > 0 {
 				pvtKey, err := loadPrivateKey(pvtKey.key, &pvtKey.passphrase)
 				if err != nil {
 					return err
