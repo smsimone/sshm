@@ -1,7 +1,6 @@
 package connect
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -81,10 +80,6 @@ func NewCommand() *cobra.Command {
 			}
 			defer session.Close()
 
-			session.Stdout = crlfWriter{os.Stdout}
-			session.Stderr = crlfWriter{os.Stderr}
-			session.Stdin = os.Stdin
-
 			if err := requestPty(session); err != nil {
 				return fmt.Errorf("failed to request pty: %s", err.Error())
 			}
@@ -105,20 +100,22 @@ func requestPty(session *ssh.Session) error {
 		height = h
 	}
 
-	err := session.RequestPty("xterm-256color", height, width, ssh.TerminalModes{
+	if oldState, err := term.MakeRaw(fd); err != nil {
+		return fmt.Errorf("failed to set raw mode: %w", err)
+	} else {
+		defer term.Restore(fd, oldState)
+	}
+
+	if err := session.RequestPty("xterm-256color", height, width, ssh.TerminalModes{
 		ssh.ECHO:          1,
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
-	})
-	if err != nil {
+		ssh.ICANON:        1, // canonical input processing
+		ssh.ISIG:          1, // enable signals
+		ssh.IEXTEN:        1, // extended processing
+	}); err != nil {
 		return err
 	}
-
-	oldState, err := term.MakeRaw(fd)
-	if err != nil {
-		return fmt.Errorf("failed to set raw mode: %w", err)
-	}
-	defer term.Restore(fd, oldState)
 
 	go func() {
 		sigCh := make(chan os.Signal, 1)
@@ -130,19 +127,26 @@ func requestPty(session *ssh.Session) error {
 		}
 	}()
 
+	stdin, _ := session.StdinPipe()
+	stdout, _ := session.StdoutPipe()
+	session.Stderr = os.Stderr
+
 	if err := session.Shell(); err != nil {
 		return err
 	}
 
+	done := make(chan error, 2)
+	go func() {
+		_, err := io.Copy(stdin, os.Stdin)
+		stdin.Close()
+		done <- err
+	}()
+	go func() {
+		_, err := io.Copy(os.Stdout, stdout)
+		done <- err
+	}()
+
+	<-done
+
 	return nil
-}
-
-type crlfWriter struct {
-	w io.Writer
-}
-
-func (c crlfWriter) Write(b []byte) (int, error) {
-	replaced := bytes.ReplaceAll(b, []byte{'\n'}, []byte{'\r', '\n'})
-	_, err := c.w.Write(replaced)
-	return len(b), err // ritorna len(b) originale, non quello replaced
 }
