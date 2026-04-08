@@ -12,5 +12,4 @@ func main() {
 	if err := fang.Execute(context.Background(), commands.GetRootCommand()); err != nil {
 		os.Exit(1)
 	}
-
 }

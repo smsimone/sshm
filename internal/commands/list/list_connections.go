@@ -2,7 +2,7 @@ package list
 
 import (
 	"fmt"
-	appstate "term_cli/internal/handlers"
+	sshconn "term_cli/internal/ssh_conn"
 
 	"github.com/spf13/cobra"
 )
@@ -12,13 +12,13 @@ func NewCommand() *cobra.Command {
 		Use:   "list-connections",
 		Short: "List registered connections",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			connections, err := appstate.LoadFile()
+			connections, err := sshconn.LoadConnections()
 			if err != nil {
 				return err
 			}
 
 			for idx, con := range *connections {
-				fmt.Printf("[%d] %s@%s:%d\n", idx, con.Username, con.Host, con.Port)
+				fmt.Printf("[%d] %s@%s:%d\n", idx, con.GetProfile().Username, con.Host, con.Port)
 			}
 
 			return nil

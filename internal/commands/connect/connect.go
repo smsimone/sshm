@@ -1,7 +1,6 @@
 package connect
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -10,11 +9,11 @@ import (
 	"os/signal"
 	"slices"
 	"strconv"
-	"strings"
 	"syscall"
-	appstate "term_cli/internal/handlers"
 	sshconn "term_cli/internal/ssh_conn"
 	"time"
+
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -30,29 +29,22 @@ func NewCommand() *cobra.Command {
 		Short: "Connect to a given host",
 		Args:  cobra.MaximumNArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if conn, err := appstate.LoadFile(); err != nil {
+			if conn, err := sshconn.LoadConnections(); err != nil {
 				return err
 			} else {
 				conns = *conn
 			}
 
 			if len(args) == 0 {
+				m := model{connections: conns, selected: 0}
+				res, err := tea.NewProgram(&m).Run()
+				if err != nil {
+					return fmt.Errorf("failed to select connection: %w", err)
+				}
 
-				for idx, con := range conns {
-					fmt.Printf("[%d] (%s) %s@%s:%d\n", idx, con.Label, con.Username, con.Host, con.Port)
-				}
-				fmt.Printf("Which connection do you want? ")
-				reader := bufio.NewReader(os.Stdin)
-				line, err := reader.ReadString('\n')
-				if err != nil {
-					return fmt.Errorf("failed to read line: %s", err.Error())
-				}
-				line = strings.TrimSpace(line)
-				idx, err := strconv.Atoi(line)
-				if err != nil {
-					return fmt.Errorf("invalid idx: %s", line)
-				}
-				connection = conns[idx]
+				parsed := (res.(*model))
+
+				connection = parsed.connections[parsed.selected]
 				return nil
 			} else {
 				label := args[0]
@@ -75,7 +67,7 @@ func NewCommand() *cobra.Command {
 			conn := connection
 
 			client, err := ssh.Dial("tcp", net.JoinHostPort(conn.Host, strconv.FormatInt(int64(conn.Port), 10)), &ssh.ClientConfig{
-				User:            conn.Username,
+				User:            conn.GetProfile().Username,
 				Auth:            conn.AuthMethods(),
 				HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 			})

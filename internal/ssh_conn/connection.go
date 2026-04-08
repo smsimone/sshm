@@ -14,30 +14,43 @@ type PrivateKey struct {
 }
 
 type Connection struct {
-	Label    string      `json:"label"`
-	Host     string      `json:"host"`
-	Port     int         `json:"port"`
-	Username string      `json:"username"`
-	Password *string     `json:"password,omitempty"`
-	PvtKey   *PrivateKey `json:"private_key,omitempty"`
+	Label   string  `json:"label"`
+	Host    string  `json:"host"`
+	Port    int     `json:"port"`
+	Profile *string `json:"profile"`
 }
 
-func (c *Connection) String() string {
+func (c *Connection) String(asJson bool) string {
+	basic := fmt.Sprintf("%s@%s:%d", c.GetProfile().Username, c.Host, c.Port)
+	if !asJson {
+		return basic
+	}
 	bytes, err := json.Marshal(c)
 	if err != nil {
-		return fmt.Sprintf("%s:%s@%s:%d", c.Username, "none", c.Host, c.Port)
+		return basic
 	}
 	return string(bytes)
 }
 
+func (c *Connection) GetProfile() Profile {
+	profile, err := GetProfile(*c.Profile)
+	if err != nil {
+		panic(err)
+	}
+	return *profile
+}
+
 func (c *Connection) AuthMethods() []ssh.AuthMethod {
 	methods := []ssh.AuthMethod{}
-	if c.Password != nil {
-		methods = append(methods, ssh.Password(*c.Password))
+
+	profile := c.GetProfile()
+
+	if profile.Password != nil {
+		methods = append(methods, ssh.Password(*profile.Password))
 	}
 
-	if c.PvtKey != nil {
-		methods = append(methods, ssh.PublicKeys(c.PvtKey.signer()))
+	if profile.PvtKey != nil {
+		methods = append(methods, ssh.PublicKeys(profile.PvtKey.signer()))
 	}
 
 	return methods

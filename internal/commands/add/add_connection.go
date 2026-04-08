@@ -4,44 +4,68 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	appstate "term_cli/internal/handlers"
+
 	sshconn "term_cli/internal/ssh_conn"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
 )
 
+func NewTeaCommand() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "add-connection",
+		Short: "Add a new connection to the file",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			p := initialModel()
+			_, err := tea.NewProgram(p).Run()
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+	return cmd
+}
+
 func NewCommand() *cobra.Command {
 	var (
-		label         string
-		host          string
-		username      string
-		port          int
-		password      string
-		keyPath       string
-		keyPassphrase string
+		label       string
+		host        string
+		port        int
+		profileName string
 	)
 
 	var cmd = &cobra.Command{
 		Use:   "add-connection",
 		Short: "Add a new connection to the file",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			_, err := sshconn.GetProfile(label)
+			if err != nil {
+				return fmt.Errorf("failed to load configuration file: %s", err.Error())
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			conn := sshconn.Connection{
-				Label:    label,
-				Host:     host,
-				Port:     port,
-				Username: username,
+				Label:   label,
+				Host:    host,
+				Port:    port,
+				Profile: &profileName,
 			}
 
-			if len(keyPath) > 0 {
-				pvtKey, err := loadPrivateKey(keyPath, &keyPassphrase)
-				if err != nil {
-					return err
-				}
-				conn.PvtKey = pvtKey
-			}
+			//			if len(privateKey) > 0 {
+			//				pvtKey, err := loadPrivateKey(privateKey, &keyPassphrase)
+			//				if err != nil {
+			//					return err
+			//				}
+			//				conn.PvtKey = pvtKey
+			//			} else if len(password) > 0 {
+			//				conn.Password = &password
+			//			}
 
-			return appstate.AddItem(conn)
+			return sshconn.AddItem(conn)
 		},
 	}
 
@@ -53,40 +77,51 @@ func NewCommand() *cobra.Command {
 	if err := cmd.MarkFlagRequired("host"); err != nil {
 		panic(err)
 	}
-	cmd.Flags().StringVarP(&username, "username", "u", os.Getenv("USER"), "Username")
-	cmd.Flags().StringVarP(&password, "password", "p", "", "Password")
-
-	cmd.Flags().StringVarP(&keyPath, "keypath", "k", "", "Private key filepath")
-	cmd.Flags().StringVarP(&keyPassphrase, "passphrase", "t", "", "Private key's passphrase")
-
-	cmd.MarkFlagsMutuallyExclusive("password", "keypath")
+	cmd.Flags().StringVarP(&profileName, "profile", "p", "", "Profile to use to connect to host")
 
 	cmd.Flags().IntVarP(&port, "port", "P", 22, "Port which handles ssh connection")
 
 	return cmd
 }
 
-func loadPrivateKey(keyPath string, keyPassphrase *string) (*sshconn.PrivateKey, error) {
-	if stat, err := os.Stat(keyPath); err != nil {
+func loadPrivateKey(privateKey string, keyPassphrase *string) (*sshconn.PrivateKey, error) {
+	var content []byte
+
+	if stat, err := os.Stat(privateKey); err != nil {
+
+		fmt.Println("Provided key is not a file, trying to read as the content")
+		content = []byte(privateKey)
+
 		return nil, fmt.Errorf("private key does not exists")
 	} else if stat.IsDir() {
 		return nil, fmt.Errorf("private key path is pointing to a directory")
+	} else {
+		if fileContent, err := os.ReadFile(privateKey); err != nil {
+			return nil, err
+		} else {
+			content = fileContent
+		}
 	}
 
-	content, err := os.ReadFile(keyPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := ssh.ParsePrivateKey(content); err != nil {
-		return nil, err
-	}
-
-	encodedContent := base64.StdEncoding.EncodeToString(content)
-
-	pvt := sshconn.PrivateKey{Content: encodedContent}
+	pvt := sshconn.PrivateKey{}
 	if keyPassphrase != nil && len(*keyPassphrase) > 0 {
 		pvt.Passphrase = keyPassphrase
+	}
+
+	if pvt.Passphrase != nil {
+		if _, err := ssh.ParsePrivateKeyWithPassphrase(content, []byte(*pvt.Passphrase)); err != nil {
+			return nil, err
+		}
+
+		encodedContent := base64.StdEncoding.EncodeToString(content)
+		pvt.Content = encodedContent
+	} else {
+		if _, err := ssh.ParsePrivateKey(content); err != nil {
+			return nil, err
+		}
+
+		encodedContent := base64.StdEncoding.EncodeToString(content)
+		pvt.Content = encodedContent
 	}
 
 	return &pvt, nil

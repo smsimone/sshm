@@ -1,16 +1,21 @@
-package appstate
+package sshconn
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 	"path"
-	sshconn "term_cli/internal/ssh_conn"
+	"slices"
 )
 
 const (
 	configPath = "$HOME/.config/ssh_manager/config"
 )
+
+type appState struct {
+	Connections []Connection `json:"connections"`
+	Profiles    []Profile    `json:"profiles"`
+}
 
 func ensureFile() {
 	expanded := os.ExpandEnv(configPath)
@@ -24,13 +29,13 @@ func ensureFile() {
 			panic(fmt.Sprintf("Failed to create config file: %s", err.Error()))
 		}
 
-		if err := os.WriteFile(expanded, []byte("[]"), os.ModeDevice); err != nil {
+		if err := os.WriteFile(expanded, []byte("{}"), os.ModeDevice); err != nil {
 			panic(fmt.Sprintf("Failed to write basic data into file: %s", err.Error()))
 		}
 	}
 }
 
-func LoadFile() (*[]sshconn.Connection, error) {
+func LoadFile() (*appState, error) {
 	ensureFile()
 
 	content, err := os.ReadFile(os.ExpandEnv(configPath))
@@ -38,7 +43,7 @@ func LoadFile() (*[]sshconn.Connection, error) {
 		return nil, err
 	}
 
-	var data []sshconn.Connection
+	var data appState
 	if err := json.Unmarshal(content, &data); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal file: %w", err)
 	}
@@ -46,13 +51,37 @@ func LoadFile() (*[]sshconn.Connection, error) {
 	return &data, nil
 }
 
-func AddItem(con sshconn.Connection) error {
+func GetProfile(label string) (*Profile, error) {
+	state, err := LoadFile()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load configuration: %s", err.Error())
+	}
+
+	idx := slices.IndexFunc(state.Profiles, func(p Profile) bool {
+		return p.Label == label
+	})
+	if idx == -1 {
+		return nil, fmt.Errorf("profile %s not found", label)
+	}
+
+	return &state.Profiles[idx], nil
+}
+
+func LoadConnections() (*[]Connection, error) {
+	state, err := LoadFile()
+	if err != nil {
+		return nil, err
+	}
+	return &state.Connections, nil
+}
+
+func AddItem(con Connection) error {
 	curr, err := LoadFile()
 	if err != nil {
 		return fmt.Errorf("failed to recover current items: %w", err)
 	}
 	data := *curr
-	data = append(data, con)
+	data.Connections = append(data.Connections, con)
 
 	bytes, err := json.Marshal(&data)
 	if err != nil {
