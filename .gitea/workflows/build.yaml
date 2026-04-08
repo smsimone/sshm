@@ -1,0 +1,85 @@
+name: Build executable
+run-name: ${{ gitea.actor }} is building sshm executable
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download deps
+        run: go mod download
+
+      - name: Build
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p dist
+          BIN_NAME="sshm"
+          EXT=""
+          if [ "${GOOS}" = "windows" ]; then EXT=".exe"; fi
+          OUT="dist/${BIN_NAME}-${GOOS}-${GOARCH}${EXT}"
+          go build -trimpath -ldflags="-s -w" -o "${OUT}" .
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sshm-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: List artifacts
+        run: ls -lah dist
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(gitea.ref, 'refs/tags/')
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: sshm-*
+          merge-multiple: true
+
+      - name: Publish release
+        uses: https://gitea.com/actions/gitea-release-action@v1
+        with:
+          # token: ${{ secrets.RELEASE_TOKEN }}
+          tag_name: ${{ gitea.ref_name }}
+          name: ${{ gitea.ref_name }}
+          files: |-
+            release-assets/*
