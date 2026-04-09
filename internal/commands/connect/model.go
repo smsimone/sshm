@@ -1,9 +1,8 @@
 package connect
 
 import (
-	"fmt"
 	sshconn "sshm/internal/ssh_conn"
-	"strings"
+	"sshm/internal/styles"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -11,16 +10,22 @@ import (
 type model struct {
 	connections []sshconn.Connection
 	selected    int
+	quitting    bool
 }
 
 var _ tea.Model = (*model)(nil)
 
-// Init implements [tea.Model].
+func newModel(conns []sshconn.Connection) *model {
+	return &model{
+		connections: conns,
+		selected:    0,
+	}
+}
+
 func (m *model) Init() tea.Cmd {
 	return nil
 }
 
-// Update implements [tea.Model].
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
@@ -33,7 +38,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.selected > 0 {
 				m.selected -= 1
 			}
-		case "ctrl+c":
+		case "ctrl+c", "q":
+			m.quitting = true
 			return m, tea.Quit
 		case "enter":
 			return m, tea.Quit
@@ -43,18 +49,22 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View implements [tea.Model].
 func (m *model) View() tea.View {
-	var msg strings.Builder
-
-	for idx := range m.connections {
-		conn := m.connections[idx]
-		if idx == m.selected {
-			fmt.Fprintf(&msg, "> %s\n", conn.String(false))
-		} else {
-			fmt.Fprintf(&msg, "  %s\n", conn.String(false))
-		}
+	rows := []string{}
+	for _, conn := range m.connections {
+		rows = append(rows, conn.String(false))
 	}
 
-	return tea.NewView(msg.String())
+	body := styles.RenderList(styles.ListConfig{
+		Title:      "Connections",
+		RowContent: rows,
+		Selected:   m.selected,
+		Commands: []styles.CommandHelp{
+			{Key: "q", Action: "quit"},
+			{Key: "j/k", Action: "movement"},
+			{Key: "return", Action: "connect"},
+		},
+	})
+
+	return tea.NewView(body)
 }

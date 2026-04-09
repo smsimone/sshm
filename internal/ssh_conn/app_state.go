@@ -29,7 +29,11 @@ func (as *appState) persist() error {
 		return err
 	}
 
-	return commitFiles()
+	go func() {
+		commitFiles()
+	}()
+
+	return nil
 }
 
 func commitFiles() error {
@@ -118,6 +122,10 @@ func AddItem(con Connection) error {
 	if err != nil {
 		return fmt.Errorf("failed to recover current items: %w", err)
 	}
+	if idx := slices.IndexFunc(state.Connections, func(p Connection) bool { return p.Label == con.Label }); idx != -1 {
+		return fmt.Errorf("Label '%s' is in use", con.Label)
+	}
+
 	state.Connections = append(state.Connections, con)
 	return state.persist()
 }
@@ -128,7 +136,49 @@ func AddProfile(profile Profile) error {
 		return fmt.Errorf("failed to recover current items: %w", err)
 	}
 
+	if idx := slices.IndexFunc(state.Profiles, func(p Profile) bool { return p.Label == profile.Label }); idx != -1 {
+		return fmt.Errorf("Label '%s' is in use", profile.Label)
+	}
+
 	state.Profiles = append(state.Profiles, profile)
+
+	return state.persist()
+}
+
+func RemoveProfile(label string, force bool) error {
+	if err := loadFile(); err != nil {
+		return fmt.Errorf("Failed to recover current items: %w", err)
+	}
+
+	profileIdx := slices.IndexFunc(state.Profiles, func(p Profile) bool { return p.Label == label })
+	if profileIdx == -1 {
+		return fmt.Errorf("Label '%s' does not exists", label)
+	}
+	profile := state.Profiles[profileIdx]
+
+	connIdx := slices.IndexFunc(state.Connections, func(p Connection) bool { return p.Profile != nil && *p.Profile == profile.Label })
+	if connIdx != -1 && !force {
+		return fmt.Errorf("Profile in use. Must use force (will delete also the connection)")
+	}
+
+	// removes the connection
+	if connIdx != -1 {
+		tmp := []Connection{}
+		for x, conn := range state.Connections {
+			if x != connIdx {
+				tmp = append(tmp, conn)
+			}
+		}
+		state.Connections = tmp
+	}
+
+	tmp := []Profile{}
+	for x, profile := range state.Profiles {
+		if x != profileIdx {
+			tmp = append(tmp, profile)
+		}
+	}
+	state.Profiles = tmp
 
 	return state.persist()
 }
