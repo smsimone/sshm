@@ -22,5 +22,6 @@ func GetRootCommand() *cobra.Command {
 	rootCmd.AddCommand(connect.NewCommand())
 	rootCmd.AddCommand(profile.AddProfileCommand())
 	rootCmd.AddCommand(history.NewCommand())
+	rootCmd.AddCommand(profile.ListProfileCommand())
 	return rootCmd
 }

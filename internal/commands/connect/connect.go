@@ -6,10 +6,8 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"slices"
 	sshconn "sshm/internal/ssh_conn"
 	"strconv"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -19,50 +17,28 @@ import (
 )
 
 func NewCommand() *cobra.Command {
-	var conns []sshconn.Connection
-	var connection sshconn.Connection
 
 	cmd := &cobra.Command{
 		Use:   "connect [label]",
 		Short: "Connect to a given host",
-		Args:  cobra.MaximumNArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if conn, err := sshconn.LoadConnections(); err != nil {
-				return err
-			} else {
-				conns = *conn
-			}
-
-			if len(args) == 0 {
-				m := model{connections: conns, selected: 0}
-				res, err := tea.NewProgram(&m).Run()
-				if err != nil {
-					return fmt.Errorf("failed to select connection: %w", err)
-				}
-
-				parsed := (res.(*model))
-
-				connection = parsed.connections[parsed.selected]
-				return nil
-			} else {
-				label := args[0]
-
-				idx := slices.IndexFunc(conns, func(con sshconn.Connection) bool { return con.Label == label })
-				if idx == -1 {
-					return fmt.Errorf("Label %s not available", label)
-				}
-				connection = conns[idx]
-				return nil
-			}
-
-		},
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			start := time.Now()
-			defer func() {
-				fmt.Printf("Connection terminated after %dms", time.Now().UnixMilli()-start.UnixMilli())
-			}()
 
-			conn := connection
+			connections, err := sshconn.LoadConnections()
+			if err != nil {
+				return err
+			}
+
+			m := newModel(*connections)
+			res, err := tea.NewProgram(m).Run()
+			if err != nil {
+				return fmt.Errorf("failed to select connection: %w", err)
+			} else if m.quitting {
+				return nil
+			}
+
+			parsed := (res.(*model))
+			conn := (*connections)[parsed.selected]
 
 			client, err := ssh.Dial("tcp", net.JoinHostPort(conn.Host, strconv.FormatInt(int64(conn.Port), 10)), &ssh.ClientConfig{
 				User:            conn.GetProfile().Username,
