@@ -5,6 +5,7 @@ import (
 	"sshm/internal/commands/connect"
 	"sshm/internal/commands/list"
 	"sshm/internal/commands/profile"
+	history "sshm/internal/commands/versioning"
 
 	"github.com/spf13/cobra"
 )
@@ -20,5 +21,6 @@ func GetRootCommand() *cobra.Command {
 	rootCmd.AddCommand(list.NewCommand())
 	rootCmd.AddCommand(connect.NewCommand())
 	rootCmd.AddCommand(profile.AddProfileCommand())
+	rootCmd.AddCommand(history.NewCommand())
 	return rootCmd
 }

@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
 	"slices"
-)
+	"sshm/internal/config"
+	"sshm/internal/versioning"
 
-const (
-	configPath = "$HOME/.config/ssh_manager/config"
+	"github.com/go-git/go-git/v6"
 )
 
 var state appState = appState{}
@@ -25,22 +24,43 @@ func (as *appState) persist() error {
 		return fmt.Errorf("failed to marshal data: %w", err)
 	}
 
-	return os.WriteFile(os.ExpandEnv(configPath), bytes, os.ModeDevice)
+	err = os.WriteFile(config.ConfigurationFilePath(), bytes, os.ModeDevice)
+	if err != nil {
+		return err
+	}
+
+	return commitFiles()
+}
+
+func commitFiles() error {
+	if repo := versioning.LoadRepository(); repo != nil {
+		wt, err := repo.Worktree()
+		if err != nil {
+			return fmt.Errorf("failed to open worktree: %w", err)
+		}
+		if err := wt.AddGlob("."); err != nil {
+			return fmt.Errorf("failed to add files: %w", err)
+		}
+		_, err = wt.Commit("Added configuration", &git.CommitOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to create commit: %w", err)
+		}
+		return versioning.PushRepository(repo)
+	}
+	return nil
 }
 
 func ensureFile() {
-	expanded := os.ExpandEnv(configPath)
-
-	if _, err := os.Stat(expanded); err != nil && os.IsNotExist(err) {
-		if err := os.MkdirAll(path.Dir(expanded), 0755); err != nil {
+	if _, err := os.Stat(config.ConfigurationFilePath()); err != nil && os.IsNotExist(err) {
+		if err := os.MkdirAll(config.ConfigurationFolder(), 0755); err != nil {
 			panic(fmt.Sprintf("Failed to create directory path: %s", err.Error()))
 		}
 
-		if _, err := os.Create(expanded); err != nil {
+		if _, err := os.Create(config.ConfigurationFilePath()); err != nil {
 			panic(fmt.Sprintf("Failed to create config file: %s", err.Error()))
 		}
 
-		if err := os.WriteFile(expanded, []byte("{}"), os.ModeDevice); err != nil {
+		if err := os.WriteFile(config.ConfigurationFilePath(), []byte("{}"), os.ModeDevice); err != nil {
 			panic(fmt.Sprintf("Failed to write basic data into file: %s", err.Error()))
 		}
 	}
@@ -49,7 +69,7 @@ func ensureFile() {
 func loadFile() error {
 	ensureFile()
 
-	content, err := os.ReadFile(os.ExpandEnv(configPath))
+	content, err := os.ReadFile(config.ConfigurationFilePath())
 	if err != nil {
 		return err
 	}
