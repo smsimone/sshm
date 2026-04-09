@@ -54,7 +54,7 @@ jobs:
           go build -trimpath -ldflags="-s -w" -o "${OUT}" .
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sshm-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*
@@ -69,9 +69,11 @@ jobs:
     if: startsWith(gitea.ref, 'refs/tags/')
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: release-assets
+          pattern: sshm-*
+          merge-multiple: true
 
       - name: Publish release
         uses: https://gitea.com/actions/gitea-release-action@v1
@@ -80,4 +82,4 @@ jobs:
           tag_name: ${{ gitea.ref_name }}
           name: ${{ gitea.ref_name }}
           files: |-
-            release-assets/**
+            release-assets/*
