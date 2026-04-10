@@ -17,7 +17,7 @@ var rootCmd = &cobra.Command{
 }
 
 func GetRootCommand() *cobra.Command {
-	rootCmd.AddCommand(add.NewTeaCommand())
+	rootCmd.AddCommand(add.NewCommand())
 	rootCmd.AddCommand(list.NewCommand())
 	rootCmd.AddCommand(connect.NewCommand())
 	rootCmd.AddCommand(profile.AddProfileCommand())
