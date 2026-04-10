@@ -1,16 +1,21 @@
 package config
 
 import (
-	"os"
 	"path"
+	"sync"
 )
 
-const (
-	configPath = "$HOME/.config/ssh_manager/config"
+var (
+	confPathOnce     sync.Once
+	configComponents = []string{"$HOME", ".config", "ssh_manager", "config"}
+	confPath         string
 )
 
 func ConfigurationFilePath() string {
-	return os.ExpandEnv(configPath)
+	confPathOnce.Do(func() {
+		confPath = configurationFilePath()
+	})
+	return confPath
 }
 
 func ConfigurationFolder() string {
