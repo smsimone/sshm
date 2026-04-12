@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"os"
-	"sshm/commands"
+
+	"github.com/smsimone/sshm/commands"
 
 	"github.com/charmbracelet/fang"
 )

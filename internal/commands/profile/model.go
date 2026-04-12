@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 	"slices"
-	sshconn "sshm/internal/ssh_conn"
 	"strings"
+
+	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
 
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/textinput"

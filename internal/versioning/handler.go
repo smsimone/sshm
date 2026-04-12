@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"sshm/internal/config"
+	"github.com/smsimone/sshm/internal/config"
 
 	"github.com/go-git/go-git/v6"
 	gitconfig "github.com/go-git/go-git/v6/config"

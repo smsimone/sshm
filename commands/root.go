@@ -1,11 +1,11 @@
 package commands
 
 import (
-	"sshm/internal/commands/add"
-	"sshm/internal/commands/connect"
-	"sshm/internal/commands/list"
-	"sshm/internal/commands/profile"
-	history "sshm/internal/commands/versioning"
+	"github.com/smsimone/sshm/internal/commands/add"
+	"github.com/smsimone/sshm/internal/commands/connect"
+	"github.com/smsimone/sshm/internal/commands/list"
+	"github.com/smsimone/sshm/internal/commands/profile"
+	history "github.com/smsimone/sshm/internal/commands/versioning"
 
 	"github.com/spf13/cobra"
 )
