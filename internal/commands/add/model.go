@@ -2,9 +2,10 @@ package add
 
 import (
 	"fmt"
-	sshconn "sshm/internal/ssh_conn"
 	"strconv"
 	"strings"
+
+	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"

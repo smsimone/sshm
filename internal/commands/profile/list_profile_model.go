@@ -1,8 +1,8 @@
 package profile
 
 import (
-	sshconn "sshm/internal/ssh_conn"
-	"sshm/internal/styles"
+	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
+	"github.com/smsimone/sshm/internal/styles"
 
 	tea "charm.land/bubbletea/v2"
 )

@@ -6,8 +6,9 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	sshconn "sshm/internal/ssh_conn"
 	"strconv"
+
+	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
 
 	tea "charm.land/bubbletea/v2"
 

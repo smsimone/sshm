@@ -1,7 +1,9 @@
 package add
 
 import (
-	sshconn "sshm/internal/ssh_conn"
+	"fmt"
+
+	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"

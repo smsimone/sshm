@@ -1,4 +1,4 @@
-module sshm
+module github.com/smsimone/sshm
 
 go 1.26.1
 
