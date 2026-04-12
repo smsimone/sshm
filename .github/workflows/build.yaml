@@ -48,7 +48,7 @@ jobs:
           CGO_ENABLED: "0"
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: |github.com/smsimone/sshm
+        run: | #github.com/smsimone/sshm
           mkdir -p dist
           BIN_NAME="sshm"
           EXT=""
