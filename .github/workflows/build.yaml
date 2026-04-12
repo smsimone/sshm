@@ -48,7 +48,7 @@ jobs:
           CGO_ENABLED: "0"
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: |github.com/smsimone/sshm
+        run: |
           mkdir -p dist
           BIN_NAME="sshm"
           EXT=""
@@ -85,4 +85,4 @@ jobs:
               return;
             }
 
-            core.info(`Promoted github.com/smsimone/sshmase contains ${assets.length} asset(s).`);
+            core.info(`Promoted release contains ${assets.length} asset(s).`);
