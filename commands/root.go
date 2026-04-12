@@ -13,11 +13,11 @@ import (
 var rootCmd = &cobra.Command{
 	Use:     "sshm",
 	Short:   "Ssh connectoin manager",
-	Version: "0.0.1",
+	Version: "0.0.3",
 }
 
 func GetRootCommand() *cobra.Command {
-	rootCmd.AddCommand(add.NewTeaCommand())
+	rootCmd.AddCommand(add.NewCommand())
 	rootCmd.AddCommand(list.NewCommand())
 	rootCmd.AddCommand(connect.NewCommand())
 	rootCmd.AddCommand(profile.AddProfileCommand())
