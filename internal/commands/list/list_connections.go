@@ -2,7 +2,8 @@ package list
 
 import (
 	"fmt"
-	sshconn "sshm/internal/ssh_conn"
+
+	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
 
 	"github.com/spf13/cobra"
 )

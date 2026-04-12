@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 	"slices"
-	"sshm/internal/config"
-	"sshm/internal/versioning"
+
+	"github.com/smsimone/sshm/internal/config"
+	"github.com/smsimone/sshm/internal/versioning"
 
 	"github.com/go-git/go-git/v6"
 )

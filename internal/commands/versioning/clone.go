@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"sshm/internal/config"
-	"sshm/internal/versioning"
+
+	"github.com/smsimone/sshm/internal/config"
+	"github.com/smsimone/sshm/internal/versioning"
 
 	"github.com/go-git/go-git/v6"
 	"github.com/spf13/cobra"
