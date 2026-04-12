@@ -1,8 +1,6 @@
 package add
 
 import (
-	"fmt"
-
 	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
 
 	tea "charm.land/bubbletea/v2"

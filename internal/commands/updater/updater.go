@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"sshm/internal/cli_updater"
+	"github.com/smsimone/sshm/internal/cli_updater"
 
 	"github.com/spf13/cobra"
 )

@@ -13,7 +13,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:     "sshm",
 	Short:   "Ssh connectoin manager",
-	Version: cli_updater.CliVersion,
+	Version: "0.0.3",
 }
 
 func GetRootCommand() *cobra.Command {
@@ -23,6 +23,5 @@ func GetRootCommand() *cobra.Command {
 	rootCmd.AddCommand(profile.AddProfileCommand())
 	rootCmd.AddCommand(history.NewCommand())
 	rootCmd.AddCommand(profile.ListProfileCommand())
-	rootCmd.AddCommand(updater.NewCommand())
 	return rootCmd
 }
