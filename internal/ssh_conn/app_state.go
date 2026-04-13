@@ -74,6 +74,12 @@ func ensureFile() {
 func loadFile() error {
 	ensureFile()
 
+	if repo, _ := git.PlainOpen(config.ConfigurationFolder()); repo != nil {
+		if err := versioning.PullRepository(repo); err != nil {
+			return fmt.Errorf("failed to pull updates: %w", err)
+		}
+	}
+
 	content, err := os.ReadFile(config.ConfigurationFilePath())
 	if err != nil {
 		return err

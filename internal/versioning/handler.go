@@ -72,6 +72,15 @@ func CloneRepository(ctx context.Context, opts CloneOptions) error {
 	return err
 }
 
+func PullRepository(repo *git.Repository) error {
+	wt, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	return wt.Pull(&git.PullOptions{})
+}
+
 func PushRepository(repo *git.Repository) error {
 	pushOpts, err := pushOptions(repo)
 	if err != nil {
