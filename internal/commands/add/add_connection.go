@@ -16,7 +16,7 @@ func NewCommand() *cobra.Command {
 			res, err := tea.NewProgram(p).Run()
 			if err != nil {
 				return err
-			} else if p.quitting {
+			} else if !p.submitting {
 				return nil
 			}
 			model := res.(model)

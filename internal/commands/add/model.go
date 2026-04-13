@@ -21,13 +21,8 @@ const (
 )
 
 var (
-	focusedStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	blurredStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	cursorStyle         = focusedStyle
-	noStyle             = lipgloss.NewStyle()
-	helpStyle           = blurredStyle
-	cursorModeHelpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
-
+	focusedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	blurredStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	focusedButton = focusedStyle.Render("[ Submit ]")
 	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render("Submit"))
 )
@@ -37,7 +32,7 @@ type model struct {
 	inputFields []textinput.Model
 	profiles    []string
 	cursorMode  cursor.Mode
-	quitting    bool
+	submitting  bool
 }
 
 var _ tea.Model = (*model)(nil)
@@ -118,13 +113,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":
-			m.quitting = true
+
 			return m, tea.Quit
 
 		case "enter", "up", "down":
 			s := msg.String()
 
 			if s == "enter" && m.focusIndex == len(m.inputFields) {
+				m.submitting = true
 				return m, tea.Quit
 			}
 
@@ -193,7 +189,7 @@ func (m model) View() tea.View {
 	}
 	fmt.Fprintf(&b, "\n\n%s\n\n", *button)
 
-	if m.quitting {
+	if m.submitting {
 		b.WriteRune('\n')
 	}
 
