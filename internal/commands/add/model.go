@@ -27,7 +27,7 @@ var (
 	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render("Submit"))
 )
 
-type model struct {
+type Model struct {
 	focusIndex  int
 	inputFields []textinput.Model
 	profiles    []string
@@ -35,10 +35,10 @@ type model struct {
 	submitting  bool
 }
 
-var _ tea.Model = (*model)(nil)
+var _ tea.Model = (*Model)(nil)
 
-func initialModel() model {
-	m := model{inputFields: make([]textinput.Model, 4)}
+func InitialModel(conn *sshconn.Connection) Model {
+	m := Model{inputFields: make([]textinput.Model, 4)}
 
 	p, _ := sshconn.LoadProfiles()
 	profiles := make([]string, len(*p))
@@ -86,10 +86,25 @@ func initialModel() model {
 		m.inputFields[i] = t
 	}
 
+	m.initializeFields(conn)
+
 	return m
 }
 
-func (m *model) GetConnection() sshconn.Connection {
+func (m *Model) initializeFields(conn *sshconn.Connection) {
+	if conn == nil {
+		return
+	}
+
+	m.inputFields[labelField].SetValue(conn.Label)
+	m.inputFields[hostField].SetValue(conn.Host)
+	m.inputFields[portField].SetValue(strconv.Itoa(conn.Port))
+	if conn.Profile != nil {
+		m.inputFields[profileField].SetValue(*conn.Profile)
+	}
+}
+
+func (m *Model) GetConnection() sshconn.Connection {
 	port, _ := strconv.Atoi(m.inputFields[portField].Value())
 	var profile *string
 	if len(m.inputFields[profileField].Value()) > 0 {
@@ -104,11 +119,11 @@ func (m *model) GetConnection() sshconn.Connection {
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		switch msg.String() {
@@ -155,7 +170,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) updateInputs(msg tea.Msg) tea.Cmd {
+func (m Model) updateInputs(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, len(m.inputFields))
 
 	for i := range m.inputFields {
@@ -165,7 +180,7 @@ func (m model) updateInputs(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m model) View() tea.View {
+func (m Model) View() tea.View {
 	var b strings.Builder
 	var c *tea.Cursor
 

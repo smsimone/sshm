@@ -12,14 +12,14 @@ func NewCommand() *cobra.Command {
 		Use:   "add-connection",
 		Short: "Add a new connection to the file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			p := initialModel()
+			p := InitialModel(nil)
 			res, err := tea.NewProgram(p).Run()
 			if err != nil {
 				return err
 			} else if !p.submitting {
 				return nil
 			}
-			model := res.(model)
+			model := res.(Model)
 			return sshconn.AddItem(model.GetConnection())
 		},
 	}

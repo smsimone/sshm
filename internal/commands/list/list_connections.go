@@ -3,6 +3,7 @@ package list
 import (
 	"fmt"
 
+	tea "charm.land/bubbletea/v2"
 	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
 
 	"github.com/spf13/cobra"
@@ -18,8 +19,9 @@ func NewCommand() *cobra.Command {
 				return err
 			}
 
-			for idx, con := range *connections {
-				fmt.Printf("[%d] (%s) %s@%s:%d\n", idx, con.Label, con.GetProfile().Username, con.Host, con.Port)
+			m := initModel(*connections)
+			if _, err = tea.NewProgram(m).Run(); err != nil {
+				return fmt.Errorf("failed to list available connections")
 			}
 
 			return nil

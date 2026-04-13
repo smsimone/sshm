@@ -2,6 +2,7 @@ package versioning
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -78,7 +79,10 @@ func PullRepository(repo *git.Repository) error {
 		return fmt.Errorf("failed to get worktree: %w", err)
 	}
 
-	return wt.Pull(&git.PullOptions{})
+	if err := wt.Pull(&git.PullOptions{}); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
+		return fmt.Errorf("failed to update config repository: %w", err)
+	}
+	return nil
 }
 
 func PushRepository(repo *git.Repository) error {
