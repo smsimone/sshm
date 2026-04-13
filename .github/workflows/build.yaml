@@ -1,18 +1,134 @@
-name: Build executable
-run-name: Building new version
+name: Build and release
+run-name: Release workflow for ${{ github.ref_name }}
 
 on:
-  release:
-    types:
-      - prereleased
-      - released
+  push:
+    branches:
+      - develop
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    if: github.event.action == 'prereleased'
+  prepare:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    outputs:
+      base_version: ${{ steps.meta.outputs.base_version }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      release_name: ${{ steps.meta.outputs.release_name }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+      release_mode: ${{ steps.meta.outputs.release_mode }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release metadata
+        id: meta
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            const versionFile = fs.readFileSync('main.go', 'utf8');
+            const versionMatch = versionFile.match(/const\s*\(\s*version\s+string\s*=\s*"([^"]+)"/s);
+
+            if (!versionMatch) {
+              core.setFailed('Unable to find version const in main.go.');
+              return;
+            }
+
+            const baseVersion = versionMatch[1];
+            if (!/^v\d+\.\d+\.\d+$/.test(baseVersion)) {
+              core.setFailed(`Invalid semantic version in main.go: ${baseVersion}`);
+              return;
+            }
+
+            const branch = context.ref.replace('refs/heads/', '');
+            const { owner, repo } = context.repo;
+
+            const parseRcTag = (tagName) => {
+              const match = tagName.match(/^v(\d+\.\d+\.\d+)-RC(\d+)$/);
+              if (!match) {
+                return null;
+              }
+
+              return {
+                baseVersion: `v${match[1]}`,
+                rcNumber: Number(match[2]),
+              };
+            };
+
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+
+            const rcReleases = releases
+              .map((release) => ({ release, parsed: parseRcTag(release.tag_name) }))
+              .filter(({ parsed }) => parsed !== null);
+
+            if (branch === 'develop') {
+              const sameVersionReleases = rcReleases.filter(({ parsed }) => parsed.baseVersion === baseVersion);
+              const nextRcNumber = sameVersionReleases.reduce((max, { parsed }) => Math.max(max, parsed.rcNumber), -1) + 1;
+              const releaseTag = `${baseVersion}-RC${nextRcNumber}`;
+
+              core.setOutput('base_version', baseVersion);
+              core.setOutput('release_tag', releaseTag);
+              core.setOutput('release_name', releaseTag);
+              core.setOutput('prerelease', 'true');
+              core.setOutput('release_mode', 'rc');
+              core.info(`Develop branch detected. Next release tag: ${releaseTag}`);
+              return;
+            }
+
+            if (branch === 'main') {
+              if (!rcReleases.length) {
+                core.setFailed('No RC release found. Create a RC from develop before releasing main.');
+                return;
+              }
+
+              const latestRc = rcReleases
+                .sort((left, right) => new Date(right.release.created_at).getTime() - new Date(left.release.created_at).getTime())[0];
+
+              if (latestRc.parsed.baseVersion !== baseVersion) {
+                core.setFailed(`main.go version ${baseVersion} does not match latest RC ${latestRc.release.tag_name}.`);
+                return;
+              }
+
+              try {
+                await github.rest.repos.getReleaseByTag({
+                  owner,
+                  repo,
+                  tag: baseVersion,
+                });
+                core.setFailed(`Stable release ${baseVersion} already exists.`);
+                return;
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+              }
+
+              core.setOutput('base_version', baseVersion);
+              core.setOutput('release_tag', baseVersion);
+              core.setOutput('release_name', baseVersion);
+              core.setOutput('prerelease', 'false');
+              core.setOutput('release_mode', 'stable');
+              core.info(`Main branch detected. Stable release tag: ${baseVersion}`);
+              return;
+            }
+
+            core.setFailed(`Unsupported branch: ${branch}`);
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -28,7 +144,6 @@ jobs:
             goarch: arm64
           - goos: windows
             goarch: amd64
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,47 +157,53 @@ jobs:
       - name: Download deps
         run: go mod download
 
-      - name: Build
+      - name: Build binary
         id: build_bin
         env:
           CGO_ENABLED: "0"
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: | #github.com/smsimone/sshm
+        run: |
           mkdir -p dist
           BIN_NAME="sshm"
           EXT=""
-          if [ "${GOOS}" = "windows" ]; then EXT=".exe"; fi
+
+          if [ "${GOOS}" = "windows" ]; then
+            EXT=".exe"
+          fi
+
           OUT="dist/${BIN_NAME}-${GOOS}-${GOARCH}${EXT}"
           go build -trimpath -ldflags="-s -w" -o "${OUT}" .
           echo "output=${OUT}" >> "${GITHUB_OUTPUT}"
 
-      - name: Upload prerelease asset
-        uses: softprops/action-gh-release@v2
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ github.event.release.tag_name }}
-          files: ${{ steps.build_bin.outputs.output }}
+          name: ${{ matrix.goos }}-${{ matrix.goarch }}
+          path: ${{ steps.build_bin.outputs.output }}
+          if-no-files-found: error
 
-  release:
-    if: github.event.action == 'released'
+  publish:
+    needs:
+      - prepare
+      - build
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
-      - name: Verify promoted assets are present
-        uses: actions/github-script@v7
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
         with:
-          script: |
-            const releaseId = context.payload.release.id;
-            const { data: assets } = await github.rest.repos.listReleaseAssets({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: releaseId,
-            });
+          path: release-assets
+          merge-multiple: true
 
-            if (!assets.length) {
-              core.setFailed('No release assets found on promoted release.');
-              return;
-            }
-
-            core.info(`Promoted github.com/smsimone/sshmase contains ${assets.length} asset(s).`);
+      - name: Create release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.release_tag }}
+          name: ${{ needs.prepare.outputs.release_name }}
+          prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
+          files: release-assets/**
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
