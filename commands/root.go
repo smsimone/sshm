@@ -11,9 +11,8 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:     "sshm",
-	Short:   "Ssh connectoin manager",
-	Version: "0.0.3",
+	Use:   "sshm",
+	Short: "Ssh connectoin manager",
 }
 
 func GetRootCommand() *cobra.Command {
