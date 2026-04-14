@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/smsimone/sshm/internal/commands/add"
 	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
 
 	"github.com/spf13/cobra"
@@ -20,8 +21,13 @@ func NewCommand() *cobra.Command {
 			}
 
 			m := initModel(*connections)
-			if _, err = tea.NewProgram(m).Run(); err != nil {
+			res, err := tea.NewProgram(m).Run()
+			if err != nil {
 				return fmt.Errorf("failed to list available connections")
+			}
+			if converted, ok := res.(add.Model); ok {
+				newConn := converted.GetConnection()
+				return sshconn.UpdateConnection(newConn)
 			}
 
 			return nil

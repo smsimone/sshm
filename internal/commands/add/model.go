@@ -18,6 +18,7 @@ const (
 	hostField
 	portField
 	profileField
+	tagsField
 )
 
 var (
@@ -38,7 +39,7 @@ type Model struct {
 var _ tea.Model = (*Model)(nil)
 
 func InitialModel(conn *sshconn.Connection) Model {
-	m := Model{inputFields: make([]textinput.Model, 4)}
+	m := Model{inputFields: make([]textinput.Model, 5)}
 
 	p, _ := sshconn.LoadProfiles()
 	profiles := make([]string, len(*p))
@@ -62,14 +63,14 @@ func InitialModel(conn *sshconn.Connection) Model {
 		t.SetStyles(s)
 
 		switch i {
-		case 0:
+		case labelField:
 			t.Placeholder = "Label"
 			t.CharLimit = 64
 			t.Focus()
-		case 1:
+		case hostField:
 			t.Placeholder = "Host"
 			t.CharLimit = 64
-		case 2:
+		case portField:
 			t.Placeholder = "Port"
 			t.Validate = func(s string) error {
 				if _, err := strconv.Atoi(s); err != nil {
@@ -77,10 +78,12 @@ func InitialModel(conn *sshconn.Connection) Model {
 				}
 				return nil
 			}
-		case 3:
+		case profileField:
 			t.Placeholder = "Profile"
 			t.ShowSuggestions = true
 			t.SetSuggestions(profiles)
+		case tagsField:
+			t.Placeholder = "Tags (comma separated)"
 		}
 
 		m.inputFields[i] = t
@@ -102,6 +105,9 @@ func (m *Model) initializeFields(conn *sshconn.Connection) {
 	if conn.Profile != nil {
 		m.inputFields[profileField].SetValue(*conn.Profile)
 	}
+	if conn.Tags != nil {
+		m.inputFields[tagsField].SetValue(strings.Join(*conn.Tags, ","))
+	}
 }
 
 func (m *Model) GetConnection() sshconn.Connection {
@@ -110,12 +116,18 @@ func (m *Model) GetConnection() sshconn.Connection {
 	if len(m.inputFields[profileField].Value()) > 0 {
 		profile = new(m.inputFields[profileField].Value())
 	}
+	var tags *[]string
+	if len(m.inputFields[tagsField].Value()) > 0 {
+		data := strings.Split(m.inputFields[tagsField].Value(), ",")
+		tags = &data
+	}
 
 	return sshconn.Connection{
 		Label:   m.inputFields[labelField].Value(),
 		Host:    m.inputFields[hostField].Value(),
 		Port:    port,
 		Profile: profile,
+		Tags:    tags,
 	}
 }
 

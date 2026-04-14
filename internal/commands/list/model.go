@@ -2,6 +2,7 @@ package list
 
 import (
 	tea "charm.land/bubbletea/v2"
+	"github.com/smsimone/sshm/internal/commands/add"
 	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
 	"github.com/smsimone/sshm/internal/styles"
 )
@@ -49,7 +50,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selected = clamp(m.selected, 0, len(m.connections))
 			return m, nil
 		case "e":
-			m.editing = &m.connections[m.selected]
+			// m.editing = &m.connections[m.selected]
+			newM := add.InitialModel(&m.connections[m.selected])
+			return newM, nil
 		}
 	}
 

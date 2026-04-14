@@ -12,12 +12,12 @@ type PrivateKey struct {
 	Content    string  `json:"content"`
 	Passphrase *string `json:"passphrase"`
 }
-
 type Connection struct {
-	Label   string  `json:"label"`
-	Host    string  `json:"host"`
-	Port    int     `json:"port"`
-	Profile *string `json:"profile"`
+	Label   string    `json:"label"`
+	Host    string    `json:"host"`
+	Port    int       `json:"port"`
+	Profile *string   `json:"profile"`
+	Tags    *[]string `json:"tags"`
 }
 
 func (c *Connection) String(asJson bool) string {

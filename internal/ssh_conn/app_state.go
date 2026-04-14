@@ -30,11 +30,7 @@ func (as *appState) persist() error {
 		return err
 	}
 
-	go func() {
-		commitFiles()
-	}()
-
-	return nil
+	return commitFiles()
 }
 
 func commitFiles() error {
@@ -149,6 +145,21 @@ func AddProfile(profile Profile) error {
 
 	state.Profiles = append(state.Profiles, profile)
 
+	return state.persist()
+}
+
+func UpdateConnection(update Connection) error {
+	if err := loadFile(); err != nil {
+		return fmt.Errorf("failed to recover current items: %w", err)
+	}
+
+	idx := slices.IndexFunc(state.Connections, func(con Connection) bool {
+		return con.Label == update.Label
+	})
+	if idx == -1 {
+		return fmt.Errorf("cannot update a non existing connection")
+	}
+	state.Connections[idx] = update
 	return state.persist()
 }
 
