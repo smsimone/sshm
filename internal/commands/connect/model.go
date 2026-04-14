@@ -1,6 +1,7 @@
 package connect
 
 import (
+	"github.com/smsimone/sshm/internal/commands/add"
 	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
 	"github.com/smsimone/sshm/internal/styles"
 
@@ -43,6 +44,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "enter":
 			return m, tea.Quit
+		case "e":
+			editModel := add.InitialModel(&m.connections[m.selected], m)
+			return editModel, nil
 		}
 
 	}
@@ -60,6 +64,7 @@ func (m *model) View() tea.View {
 		RowContent: rows,
 		Selected:   m.selected,
 		Commands: []styles.CommandHelp{
+			{Key: "e", Action: "edit"},
 			{Key: "q", Action: "quit"},
 			{Key: "j/k", Action: "movement"},
 			{Key: "return", Action: "connect"},

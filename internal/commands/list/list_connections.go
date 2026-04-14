@@ -25,7 +25,7 @@ func NewCommand() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to list available connections")
 			}
-			if converted, ok := res.(add.Model); ok {
+			if converted, ok := res.(*add.Model); ok && converted.Submitting {
 				newConn := converted.GetConnection()
 				return sshconn.UpdateConnection(newConn)
 			}

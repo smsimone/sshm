@@ -35,7 +35,7 @@ func clamp(x, min, max int) int {
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		switch msg.String() {
-		case "ctrl+q", "esc":
+		case "q", "esc":
 			if m.editing != nil {
 				m.editing = nil
 				return m, nil
@@ -50,9 +50,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selected = clamp(m.selected, 0, len(m.connections))
 			return m, nil
 		case "e":
-			// m.editing = &m.connections[m.selected]
-			newM := add.InitialModel(&m.connections[m.selected])
-			return newM, nil
+			return add.InitialModel(&m.connections[m.selected], nil), nil
 		}
 	}
 
@@ -69,7 +67,15 @@ func (m *model) View() tea.View {
 		Title:      "Connections",
 		Selected:   m.selected,
 		RowContent: lines,
+		Commands: []styles.CommandHelp{
+			{Key: "e", Action: "edit"},
+			{Key: "j/k", Action: "movement"},
+			{Key: "q", Action: "quit"},
+		},
 	})
 
-	return tea.NewView(content)
+	return tea.View{
+		Content:     content,
+		WindowTitle: "SSHM - Connection list",
+	}
 }

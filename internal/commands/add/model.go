@@ -33,13 +33,14 @@ type Model struct {
 	inputFields []textinput.Model
 	profiles    []string
 	cursorMode  cursor.Mode
-	submitting  bool
+	Submitting  bool
+	oldModel    tea.Model
 }
 
 var _ tea.Model = (*Model)(nil)
 
-func InitialModel(conn *sshconn.Connection) Model {
-	m := Model{inputFields: make([]textinput.Model, 5)}
+func InitialModel(conn *sshconn.Connection, oldModel tea.Model) *Model {
+	m := Model{inputFields: make([]textinput.Model, 5), oldModel: oldModel}
 
 	p, _ := sshconn.LoadProfiles()
 	profiles := make([]string, len(*p))
@@ -91,7 +92,7 @@ func InitialModel(conn *sshconn.Connection) Model {
 
 	m.initializeFields(conn)
 
-	return m
+	return &m
 }
 
 func (m *Model) initializeFields(conn *sshconn.Connection) {
@@ -131,27 +132,28 @@ func (m *Model) GetConnection() sshconn.Connection {
 	}
 }
 
-func (m Model) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":
-
 			return m, tea.Quit
 
 		case "enter", "up", "down":
 			s := msg.String()
 
 			if s == "enter" && m.focusIndex == len(m.inputFields) {
-				m.submitting = true
+				m.Submitting = true
+				if m.oldModel != nil {
+					return m.oldModel, nil
+				}
 				return m, tea.Quit
 			}
 
-			// Cycle indexes
 			if s == "up" || s == "shift+tab" {
 				m.focusIndex--
 			} else {
@@ -182,7 +184,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) updateInputs(msg tea.Msg) tea.Cmd {
+func (m *Model) updateInputs(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, len(m.inputFields))
 
 	for i := range m.inputFields {
@@ -192,7 +194,7 @@ func (m Model) updateInputs(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m Model) View() tea.View {
+func (m *Model) View() tea.View {
 	var b strings.Builder
 	var c *tea.Cursor
 
@@ -216,11 +218,19 @@ func (m Model) View() tea.View {
 	}
 	fmt.Fprintf(&b, "\n\n%s\n\n", *button)
 
-	if m.submitting {
+	if m.Submitting {
 		b.WriteRune('\n')
 	}
 
-	v := tea.NewView(b.String())
-	v.Cursor = c
-	return v
+	label := m.inputFields[labelField].Value()
+	title := "SSHM - Edit connection"
+	if len(label) > 0 {
+		title = fmt.Sprintf("SSHM - Edit %s", label)
+	}
+
+	return tea.View{
+		Content:     b.String(),
+		Cursor:      c,
+		WindowTitle: title,
+	}
 }
