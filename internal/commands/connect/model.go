@@ -45,7 +45,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			return m, tea.Quit
 		case "e":
-			editModel := add.InitialModel(&m.connections[m.selected], m)
+			editModel := add.InitialModel(&m.connections[m.selected])
 			return editModel, nil
 		}
 

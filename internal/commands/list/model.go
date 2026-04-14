@@ -50,7 +50,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selected = clamp(m.selected, 0, len(m.connections))
 			return m, nil
 		case "e":
-			return add.InitialModel(&m.connections[m.selected], nil), nil
+			return add.InitialModel(&m.connections[m.selected]), nil
 		}
 	}
 

@@ -40,8 +40,6 @@ func NewCommand() *cobra.Command {
 			} else {
 				return err
 			}
-
-			return nil
 		},
 	}
 

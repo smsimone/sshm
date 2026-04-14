@@ -34,13 +34,17 @@ type Model struct {
 	profiles    []string
 	cursorMode  cursor.Mode
 	Submitting  bool
-	oldModel    tea.Model
+	originalId  *int
 }
 
 var _ tea.Model = (*Model)(nil)
 
-func InitialModel(conn *sshconn.Connection, oldModel tea.Model) *Model {
-	m := Model{inputFields: make([]textinput.Model, 5), oldModel: oldModel}
+func InitialModel(conn *sshconn.Connection) *Model {
+	m := Model{inputFields: make([]textinput.Model, 5)}
+
+	if conn != nil {
+		m.originalId = conn.Id
+	}
 
 	p, _ := sshconn.LoadProfiles()
 	profiles := make([]string, len(*p))
@@ -124,6 +128,7 @@ func (m *Model) GetConnection() sshconn.Connection {
 	}
 
 	return sshconn.Connection{
+		Id:      m.originalId,
 		Label:   m.inputFields[labelField].Value(),
 		Host:    m.inputFields[hostField].Value(),
 		Port:    port,
@@ -148,9 +153,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if s == "enter" && m.focusIndex == len(m.inputFields) {
 				m.Submitting = true
-				if m.oldModel != nil {
-					return m.oldModel, nil
-				}
 				return m, tea.Quit
 			}
 

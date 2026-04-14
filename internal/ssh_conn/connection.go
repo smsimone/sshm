@@ -13,6 +13,7 @@ type PrivateKey struct {
 	Passphrase *string `json:"passphrase"`
 }
 type Connection struct {
+	Id      *int      `json:"id"`
 	Label   string    `json:"label"`
 	Host    string    `json:"host"`
 	Port    int       `json:"port"`

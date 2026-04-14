@@ -120,7 +120,7 @@ func LoadConnections() (*[]Connection, error) {
 	return &state.Connections, nil
 }
 
-func AddItem(con Connection) error {
+func addConnection(con Connection) error {
 	err := loadFile()
 	if err != nil {
 		return fmt.Errorf("failed to recover current items: %w", err)
@@ -149,12 +149,16 @@ func AddProfile(profile Profile) error {
 }
 
 func UpdateConnection(update Connection) error {
+	if update.Id == nil {
+		return addConnection(update)
+	}
+
 	if err := loadFile(); err != nil {
 		return fmt.Errorf("failed to recover current items: %w", err)
 	}
 
 	idx := slices.IndexFunc(state.Connections, func(con Connection) bool {
-		return con.Label == update.Label
+		return *con.Id == *update.Id
 	})
 	if idx == -1 {
 		return fmt.Errorf("cannot update a non existing connection")

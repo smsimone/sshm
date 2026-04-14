@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"strconv"
 
+	"github.com/smsimone/sshm/internal/commands/add"
 	sshconn "github.com/smsimone/sshm/internal/ssh_conn"
 
 	tea "charm.land/bubbletea/v2"
@@ -38,8 +39,17 @@ func NewCommand() *cobra.Command {
 				return nil
 			}
 
-			parsed := (res.(*model))
-			conn := (*connections)[parsed.selected]
+			var conn sshconn.Connection
+			if parsed, ok := res.(*add.Model); ok {
+				if !parsed.Submitting {
+					return nil
+				}
+				update := parsed.GetConnection()
+				sshconn.UpdateConnection(update)
+				conn = update
+			} else if parsed, ok := res.(*model); ok {
+				conn = parsed.connections[parsed.selected]
+			}
 
 			client, err := ssh.Dial("tcp", net.JoinHostPort(conn.Host, strconv.FormatInt(int64(conn.Port), 10)), &ssh.ClientConfig{
 				User:            conn.GetProfile().Username,
